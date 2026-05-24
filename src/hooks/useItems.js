@@ -178,6 +178,7 @@ export function useItems(userId) {
         fetchItems(lastFetchParamsRef.current)
       }
     }
+    return { error }
   }, [userId, fetchItems])
 
   return { items, loading, addItem, markDone, restoreItem, deleteItem, fetchItems, updateItem }
