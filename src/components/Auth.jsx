@@ -7,7 +7,7 @@ export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState('')
+  const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')
 
   const handleSubmit = async (e) => {
@@ -20,17 +20,29 @@ export default function Auth() {
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-      } else {
+      } else if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
         setSuccess('Account created! Check your email to confirm, then sign in.')
         setMode('signin')
+      } else if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        })
+        if (error) throw error
+        setSuccess('Password reset link sent! Check your email.')
       }
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const switchMode = (next) => {
+    setMode(next)
+    setError('')
+    setSuccess('')
   }
 
   return (
@@ -46,7 +58,9 @@ export default function Auth() {
 
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
           <h2 className="text-lg font-semibold text-gray-100 mb-5">
-            {mode === 'signin' ? 'Sign in to your account' : 'Create an account'}
+            {mode === 'signin' && 'Sign in to your account'}
+            {mode === 'signup' && 'Create an account'}
+            {mode === 'forgot' && 'Reset your password'}
           </h2>
 
           {error && (
@@ -61,11 +75,13 @@ export default function Auth() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Email</label>
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -73,50 +89,75 @@ export default function Auth() {
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
+
+            {mode !== 'forgot' && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm text-gray-400">Password</label>
+                  {mode === 'signin' && (
+                    <button
+                      type="button"
+                      onClick={() => switchMode('forgot')}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  name={mode === 'signup' ? 'new-password' : 'current-password'}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg px-4 py-2.5 transition-colors"
             >
-              {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+              {loading
+                ? 'Please wait...'
+                : mode === 'signin'
+                ? 'Sign In'
+                : mode === 'signup'
+                ? 'Create Account'
+                : 'Send Reset Link'}
             </button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-gray-400">
-            {mode === 'signin' ? (
-              <>
+          <div className="mt-4 text-center text-sm text-gray-400 space-y-2">
+            {mode === 'signin' && (
+              <p>
                 No account?{' '}
-                <button
-                  onClick={() => { setMode('signup'); setError(''); setSuccess('') }}
-                  className="text-indigo-400 hover:text-indigo-300 transition-colors"
-                >
+                <button onClick={() => switchMode('signup')} className="text-indigo-400 hover:text-indigo-300 transition-colors">
                   Sign up
                 </button>
-              </>
-            ) : (
-              <>
+              </p>
+            )}
+            {mode === 'signup' && (
+              <p>
                 Have an account?{' '}
-                <button
-                  onClick={() => { setMode('signin'); setError(''); setSuccess('') }}
-                  className="text-indigo-400 hover:text-indigo-300 transition-colors"
-                >
+                <button onClick={() => switchMode('signin')} className="text-indigo-400 hover:text-indigo-300 transition-colors">
                   Sign in
                 </button>
-              </>
+              </p>
             )}
-          </p>
+            {mode === 'forgot' && (
+              <p>
+                <button onClick={() => switchMode('signin')} className="text-indigo-400 hover:text-indigo-300 transition-colors">
+                  Back to sign in
+                </button>
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
